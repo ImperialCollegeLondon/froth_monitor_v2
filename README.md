@@ -1,86 +1,80 @@
-# pip-tools Template
+# Froth monitor
 
-[![Test and build](https://github.com/ImperialCollegeLondon/pip-tools-template/actions/workflows/ci.yml/badge.svg)](https://github.com/ImperialCollegeLondon/pip-tools-template/actions/workflows/ci.yml)
+---
+Froth monitor is an interactive GUI application for analyzing froth videos in
+real-time or offline. It allows users to draw **Regions of Interest (ROIs)**, track
+**froth movement** using optical flow algorithm (more algorithms in the future), and
+export detailed analysis results, including **delta pixels between frames, velocity data and timestamps**. It allows user to calibrate the **ratio of pixel to real distance** by ruler drawing, and define the **overflow direction of froths** by arrow drawing. It is also capable of **recording real-time video** from the camera.
 
-This is a minimal Python 3.12 application that uses [`pip-tools`] for packaging and dependency management. It also provides [`pre-commit`](https://pre-commit.com/) hooks (for for [ruff](https://pypi.org/project/ruff/) and [`mypy`](https://mypy.readthedocs.io/en/stable/)) and automated tests using [`pytest`](https://pytest.org/) and [GitHub Actions](https://github.com/features/actions). Pre-commit hooks are automatically kept updated with a dedicated GitHub Action, this can be removed and replace with [pre-commit.ci](https://pre-commit.ci) if using an public repo. It was developed by the [Imperial College Research Computing Service](https://www.imperial.ac.uk/admin-services/ict/self-service/research-support/rcs/).
+## Installation and Usage
 
-[`pip-tools`] is chosen as a lightweight dependency manager that adheres to the [latest standards](https://peps.python.org/pep-0621/) using `pyproject.toml`.
-
-## Usage
-
-To use this repository as a template for your own application:
-
-1. Click the green "Use this template" button above
-2. Name and create your repository
-3. Clone your new repository and make it your working directory
-4. Replace instances of `myproject` with your own application name. Edit:
-   - `pyproject.toml` (also change the list of authors here)
-   - `tests/test_myproject.py`
-   - Rename `myproject` directory
-5. Create and activate a Virtual Environment:
+1. Clone the repository:
 
    ```bash
-   python -m venv .venv
-   source .venv/bin/activate # with Powershell on Windows: `.venv\Scripts\Activate.ps1`
-   ```
+   git clone https://github.com/gyyyno1/Froth_monitor.git
 
-6. Install development requirements:
+2. Navigate to the project directory:
 
    ```bash
-   pip install -r dev-requirements.txt
-   ```
+   cd your-repo
 
-7. Install the git hooks:
-
-   ```bash
-   pre-commit install
-   ```
-
-8. Run the main app:
+3. Install dependencies by poetry
 
    ```bash
-   python -m myproject
+   pipx install poetry
+   poetry install
    ```
 
-9. Run the tests:
+4. Run the application by poetry
 
    ```bash
-   pytest
+   poetry run python -m froth_monitor
    ```
 
-### Updating Dependencies
+---
 
-To add or remove dependencies:
+## Features
+### Update 26th May 2025
 
-1. Edit the `dependencies` variables in the `pyproject.toml` file (aim to keep develpment tools separate from the project requirements).
-2. Update the requirements files:
-   - `pip-compile` for `requirements.txt` - the project requirements.
-   - `pip-compile --extra dev -o dev-requirements.txt` for `dev-requirements.txt` - the development requirements.
-3. Sync the files with your installation (install packages):
-   - `pip-sync dev-requirements.txt requirements.txt`
+A dynamic and interactive application designed to analyze and visualize froth
+movement from video data using advanced image processing and data visualization
+techniques.
 
-To upgrade pinned versions, use the `--upgrade` flag with `pip-compile`.
+### Features
 
-Versions can be restricted from updating within the `pyproject.toml` using standard python package version specifiers, i.e. `"black<23"` or `"pip-tools!=6.12.2"`
+#### 1. Arrow Direction Analysis
 
-### Customising
+Draw, lock, and display an arrow indicating the direction of froth overflow.
+Customizable and adjustable arrow direction for flexible analysis.
 
-All configuration can be customised to your preferences. The key places to make changes
-for this are:
+#### 2. Ruler drawing for calibration
+Draw rulers on the video canvas to calibrate the distance between two points.
+The distance between the two points is calculated and displayed on the canvas.
 
-- The `pyproject.toml` file, where you can edit:
-  - The build system (change from setuptools to other packaging tools like [Hatch](https://hatch.pypa.io/) or [flit](https://flit.pypa.io/)).
-  - The python version.
-  - The project dependencies. Extra optional dependencies can be added by adding another list under `[project.optional-dependencies]` (i.e. `doc = ["mkdocs"]`).
-  - The `mypy` and `pytest` configurations.
-- The `.pre-commit-config.yaml` for pre-commit settings.
-- The `.github` directory for all the CI configuration.
-  - This repo uses `pre-commit.ci` to update pre-commit package versions and automatically merges those PRs with the `auto-merge.yml` workflow.
-  - Note that `pre-commit.ci` is an external service and free for open source repos. For private repos uncomment the commented portion of the `pre-commit_autoupdate.yml` workflow.
+#### 2. Region of Interest (ROI) Drawing
 
-[`pip-tools`]: https://pip-tools.readthedocs.io/en/latest/
+Draw multiple ROIs on the video canvas.
+Real-time movement analysis for each ROI.
+Axis visualization (X and Y axes) within each ROI to track movement.
 
-### Publishing
+#### 3. Velocity Analysis
+Real-time velocity analysis for each ROI.
+Velocity data is displayed in a Cartesian coordinate system.
+Velocity data is exported to an Excel file.
 
-The GitHub workflow includes an action to publish on release.
-To run this action, uncomment the commented portion of `publish.yml`, and modify the steps for the desired behaviour (publishing a Docker image, publishing to PyPI, deploying documentation etc.)
+#### 4. Video Recording
+This program is able to record the video stream directly from the camera. In case that the user want to re-analyze the video.
+
+#### 5. Data Export
+
+Export analysis results as Excel files.
+Customizable file naming and export directory.
+Separate sheets for each ROI in the Excel output.
+
+#### 5. Replay and Reset
+
+Save and end the current session, clearing ROIs and resetting the interface for a new analysis.
+
+## Authors
+
+- Mr Yiyang Guan - Department of Earth Science and Engineering, Imperial College London

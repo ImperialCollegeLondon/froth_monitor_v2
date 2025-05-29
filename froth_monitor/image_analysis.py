@@ -121,12 +121,31 @@ class VideoAnalysis:
             prev=gray_previous,
             next=gray_current,
             flow=cast(MatLike, None),
-            pyr_scale=0.5,
+
+            pyr_scale=0.5, 
+            # image scale to build pyramids for each image
+            # lower values increase accuracy but slow down the process
+
             levels=3,
+            # number of pyramid layers
+            # higher values increase accuracy but also increase the computation time
+
             winsize=25,
+            # average window size for each pixel
+            # larger values reduce noise but may also reduce accuracy
+
             iterations=3,
+            # number of iterations for each pyramid level
+            # higher values increase accuracy but also increase the computation time
+
             poly_n=7,
+            # size of the pixel neighborhood used to find polynomial expansion
+            # larger values increase accuracy but also increase the computation time
+
             poly_sigma=1.5,
+            # standard deviation of the Gaussian used to smooth derivatives
+            # larger values reduce noise but may also reduce accuracy
+
             flags=0,
         )
 

@@ -21,7 +21,8 @@ from PySide6.QtWidgets import (
     QFrame,
     QGroupBox,
     QToolButton,
-    QSpinBox
+    QSpinBox,
+    QComboBox,
 )
 from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon, QFont, QColor
@@ -51,7 +52,7 @@ class MainGUIWindow(QMainWindow):
         """
         super(MainGUIWindow, self).__init__()
         self.setWindowTitle("Froth Monitor")
-        self.setGeometry(100, 100, 1000, 800)
+        self.setGeometry(100, 100, 1000, 600)
         self.setStyleSheet("background-color: #f0f0f0;")
 
         # Initialize default arrow angle (90 degrees)
@@ -124,7 +125,8 @@ class MainGUIWindow(QMainWindow):
         
         # Add spacer to push window controls to the right
         header_layout.addStretch()
-        
+
+
         return header_bar
 
     def _create_left_panel(self) -> QFrame:
@@ -197,9 +199,28 @@ class MainGUIWindow(QMainWindow):
             }
             """
         )
+        
+        self.algorithm_configuration = QPushButton("Algorithm Configuration")
+        self.algorithm_configuration.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #4285f4;
+                color: white;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 8px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #3367d6;
+            }
+            """
+        )
+        
         source_layout.addWidget(self.webcam_radio)
         source_layout.addWidget(self.prerecorded_radio)
         source_layout.addWidget(self.import_button)
+        source_layout.addWidget(self.algorithm_configuration)
 
         return source_group
 
@@ -629,10 +650,12 @@ class MainGUIWindow(QMainWindow):
         self.play_pause_button.setFixedSize(40, 40)
         self.play_pause_button.setToolTip("Play/Pause Video")
         
+
         # Add the button to the layout
         media_controls_layout.addWidget(self.play_pause_button)
+        # Add a stretch to push the button to the right
         media_controls_layout.addStretch()
-        
+
         # Add the media controls container to the main layout
         layout.addWidget(media_controls_container)
     

@@ -15,6 +15,14 @@ from PySide6.QtWidgets import (
     QMessageBox,
     QDialog,
     QComboBox,
+    QHBoxLayout,
+    QLabel,
+    QSpinBox,
+    QDoubleSpinBox,
+    QVBoxLayout,
+    QMessageBox,
+    QTableWidget,
+    QTableWidgetItem,
     QPushButton,
     QVBoxLayout,
 )
@@ -39,6 +47,145 @@ from froth_monitor.export import Export
 
 # Import the video recorder module
 from froth_monitor.video_recorder import VideoRecorder
+
+class AlgorithmConfigurationHandler:
+    """
+    A class to handle the configuration of the velocity calculation algorithm.
+
+    This class provides a dialog window for configuring thevelocity calculation
+    algorithm. It allows the user to select an algorithm (Farneback or Lucas-Kanade) and 
+    adjust the parameters for the selected algorithm. The class also provides a 
+    method to retrieve the selected algorithm and its parameters.
+    """
+    def __init__(self, gui: MainGUIWindow):
+        self.gui = gui
+        self.dialog = QDialog()
+        self.dialog.setWindowTitle("Algorithm Configuration")
+        main_layout = QHBoxLayout(self.dialog)
+
+        self.lk_params = dict(winSize=(15, 15),
+                                maxLevel=2,
+                                criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 
+                                10, 
+                                0.03))
+        self.lk_valid_values = {
+            "winSize": [(5,5), (7,7), 
+                        (9,9), (11,11), 
+                        (13,13), (15,15), 
+                        (17,17), (19,19), 
+                        (21,21)],  # Must be between 0 and 1 (exclusive)
+            "maxLevel": [0, 1, 2, 3, 4, 5],           # Positive integers
+            "criteria": [
+                (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, "EPS|COUNT"),
+                (cv2.TERM_CRITERIA_EPS, "EPS"),
+                (cv2.TERM_CRITERIA_COUNT, "COUNT")
+            ]
+        }
+
+        self.of_params = dict(pyr_scale=0.5, 
+                                levels=int(3), 
+                                winsize=int(15), 
+                                iterations=int(3), 
+                                poly_n=int(7), 
+                                poly_sigma=1.5)
+        self.of_valid_values = {
+                "pyr_scale": [0.3, 0.5, 0.7, 0.9],  # Must be between 0 and 1 (exclusive)
+                "levels": [1, 2, 3, 4, 5],           # Positive integers
+                "winsize": [5, 7, 9, 11, 13, 15, 17, 19, 21],  # Positive odd integers
+                "iterations": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], # Positive integers
+                "poly_n": [5, 7],                    # Only 5 or 7
+        }
+
+
+        # Left side: Algorithm selection and parameter table
+        left_layout = QVBoxLayout()
+        self.algorithm_selector = QComboBox()
+        left_layout.addWidget(self.algorithm_selector)
+        self.param_table = QTableWidget()  # Placeholder for parameter table
+        left_layout.addWidget(self.param_table)
+        left_layout.addStretch()
+
+        self._add_algorithm_combo()  # Add this line
+
+        # Right side: Video canvas and info bar
+        right_layout = QVBoxLayout()
+        self.video_canvas = QLabel("[Video Canvas]")  # Placeholder for video display
+        self.video_canvas.setFixedSize(320, 240)  # Example size
+        right_layout.addWidget(self.video_canvas)
+        self.info_bar = QLabel("Frame time: -- ms | Avg (15): -- ms")
+        right_layout.addWidget(self.info_bar)
+
+        main_layout.addLayout(left_layout)
+        main_layout.addLayout(right_layout)
+        self.dialog.setLayout(main_layout)
+
+    def _add_algorithm_combo(self):
+        self.algorithm_selector.addItems(["Farneback", "Lucas-Kanade"])
+        self.algorithm_selector.setStyleSheet(
+            "background-color: #4285f4; color: white; font-size: 12px; padding: 8px; \
+            border-radius: 4px;"
+        )
+        self._update_parameter_table()
+        self.algorithm_selector.currentIndexChanged.connect(self._update_parameter_table)
+
+    def _update_parameter_table(self):
+        selected_algorithm = self.algorithm_selector.currentText()
+
+        if selected_algorithm == "Farneback":
+            self.param_table.setRowCount(5)
+            self.param_table.setColumnCount(1)
+            self.param_table.setHorizontalHeaderLabels(["Value"])
+            self.param_table.setVerticalHeaderLabels(
+                ["pyr_scale", "levels", "winsize", "iterations", "poly_n"]
+            )
+            param_keys = list(self.of_params.keys())
+
+            for row in range(5):
+                key = param_keys[row]
+                value = self.of_params[key]
+                if key in self.of_valid_values:
+                    combo = QComboBox()
+                    for v in self.of_valid_values[key]:
+                        combo.addItem(str(v))
+                    combo.setCurrentText(str(value))
+                    self.param_table.setCellWidget(row, 0, combo)
+                else:
+                    # For poly_sigma, which is not in the table but is in of_params, use QDoubleSpinBox
+                    spinbox = QDoubleSpinBox()
+                    spinbox.setDecimals(2)
+                    spinbox.setRange(0.1, 10.0)
+                    spinbox.setValue(value)
+                    self.param_table.setCellWidget(row, 0, spinbox)
+
+        if selected_algorithm == "Lucas-Kanade":
+            self.param_table.setRowCount(3)
+            self.param_table.setColumnCount(1)
+            self.param_table.setHorizontalHeaderLabels(["Value"])
+            self.param_table.setVerticalHeaderLabels(
+                ["winSize", "maxLevel", "criteria"]
+            )
+
+            # winSize
+            combo_win = QComboBox()
+            for ws in self.lk_valid_values["winSize"]:
+                combo_win.addItem(str(ws))
+            combo_win.setCurrentText(str(self.lk_params["winSize"]))
+            self.param_table.setCellWidget(0, 0, combo_win)
+
+            # maxLevel
+            combo_level = QComboBox()
+            for lvl in self.lk_valid_values["maxLevel"]:
+                combo_level.addItem(str(lvl))
+            combo_level.setCurrentText(str(self.lk_params["maxLevel"]))
+            self.param_table.setCellWidget(1, 0, combo_level)
+
+            # criteria
+            combo_criteria = QComboBox()
+            for val, label in self.lk_valid_values["criteria"]:
+                combo_criteria.addItem(label, val)
+            combo_criteria.setCurrentIndex(0)  # Default to EPS|COUNT
+            self.param_table.setCellWidget(2, 0, combo_criteria)
+
 
 
 class EventHandler:
@@ -112,6 +259,7 @@ class EventHandler:
         # # Connect buttons directly using the gui reference
         self.gui.play_pause_button.clicked.connect(self.pause_play)
         self.gui.add_roi_button.clicked.connect(self.add_roi)
+        self.gui.algorithm_configuration.clicked.connect(self.open_algorithm_configuration)
         self.gui.confirm_arrow_button.clicked.connect(self.confirm_arrow_n_ruler)
         self.gui.save_button.clicked.connect(self.save_data)
         self.gui.record_button.clicked.connect(self.toggle_recording)
@@ -236,6 +384,14 @@ class EventHandler:
                 self.gui, "Error", "Could not open the selected camera!"
             )
             return
+
+    def open_algorithm_configuration(self):
+        """
+        Open a dialog to configure the velocity calculation algorithm.
+        """
+        dialog = AlgorithmConfigurationHandler(self.gui)
+        dialog.dialog.exec()
+        pass
 
     def pause_play(self):
         """

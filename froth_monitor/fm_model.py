@@ -35,6 +35,7 @@ print(f"Processing frame {frame_number}")
 
 import numpy as np
 import time
+import cv2
 from typing import cast
 from datetime import datetime
 from PySide6.QtCore import QRect
@@ -199,6 +200,22 @@ class FrameModel:
 
         self.px2mm = 1.0
         self.degree = -90.0
+
+        # Algorithm parameters
+        self.current_algorithm = "farneback"
+        self.algorithm_list = ["farneback", "lucas-kanade"]
+        self.lk_params = dict(winSize=(15, 15),
+                                maxLevel=2,
+                                criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 
+                                10, 
+                                0.03))
+
+        self.of_params = dict(pyr_scale=0.5, 
+                                levels=int(3), 
+                                winsize=int(15), 
+                                iterations=int(3), 
+                                poly_n=int(7), 
+                                poly_sigma=1.5)    
 
     def process_frame(self, frame: np.ndarray) -> tuple[int, list[ROI], bool, bool]:
         """

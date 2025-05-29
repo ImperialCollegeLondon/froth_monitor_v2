@@ -90,74 +90,73 @@ class VideoAnalysis:
         self.current_velocity = 0
         self.arrow_dir_x = arrow_dir_x
         self.arrow_dir_y = arrow_dir_y
+        self.current_algorithm = "farneback"  # or "lucas-kanade"
+        
+        self.lk_params = dict(winSize=(15, 15),
+                             maxLevel=2,
+                             criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 
+                             10, 
+                             0.03))
+
+        self.of_params = dict(pyr_scale=0.5, 
+                                levels=int(3), 
+                                winsize=int(15), 
+                                iterations=int(3), 
+                                poly_n=int(7), 
+                                poly_sigma=1.5)    
 
     def analyze(self, current_frame: np.ndarray) -> tuple[float, float]:
-        """
-        Analyze the given frame for changes in x and y directions by calculating dense optical flow using the Farneback method.
 
-        Parameters
-        ----------
-        current_frame : np.ndarray
-            The frame to analyze.
-
-        Returns
-        -------
-        tuple[float, float]
-            The delta pixel values in x and y directions between the current and previous frames.
-        """
-
-        # Analyze the given frame for changes in x and y directions
         if self.previous_frame is None:
-            # If there's no previous frame, store the current frame and return
             self.previous_frame = current_frame
+            self.prev_pts = None
             return cast(float, None), cast(float, None)
 
-        # Convert both current and previous frames to grayscale
         gray_current: MatLike = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY)
         gray_previous: MatLike = cv2.cvtColor(self.previous_frame, cv2.COLOR_BGR2GRAY)
 
-        # Calculate dense optical flow using Farneback method
-        flow = cv2.calcOpticalFlowFarneback(
-            prev=gray_previous,
-            next=gray_current,
-            flow=cast(MatLike, None),
+        if self.current_algorithm == "farneback":
+            flow = cv2.calcOpticalFlowFarneback(
+                prev=gray_previous,
+                next=gray_current,
+                flow=cast(MatLike, None),
+                **self.of_params,
+                flags=0,
+            ) # type: ignore
+            print(self.of_params)
+            flow_x = flow[..., 0]
+            flow_y = flow[..., 1]
+            avg_flow_x = cast(float, np.mean(flow_x)) # type: ignore
+            avg_flow_y = cast(float, np.mean(flow_y)) # type: ignore
 
-            pyr_scale=0.5, 
-            # image scale to build pyramids for each image
-            # lower values increase accuracy but slow down the process
+        elif self.current_algorithm == "lucas-kanade":
 
-            levels=3,
-            # number of pyramid layers
-            # higher values increase accuracy but also increase the computation time
+            if getattr(self, 'prev_pts', None) is None:
+                
+                # Detect good features to track in the previous frame
+                self.prev_pts = cv2.goodFeaturesToTrack(gray_previous, maxCorners=100, qualityLevel=0.3, minDistance=7, blockSize=7)
 
-            winsize=25,
-            # average window size for each pixel
-            # larger values reduce noise but may also reduce accuracy
+            if self.prev_pts is not None:
 
-            iterations=3,
-            # number of iterations for each pyramid level
-            # higher values increase accuracy but also increase the computation time
+                next_pts, status, err = cv2.calcOpticalFlowPyrLK(gray_previous, gray_current, self.prev_pts, None, **self.lk_params)
+                good_new = next_pts[status == 1] if next_pts is not None else np.array([])
+                good_old = self.prev_pts[status == 1] if self.prev_pts is not None else np.array([])
 
-            poly_n=7,
-            # size of the pixel neighborhood used to find polynomial expansion
-            # larger values increase accuracy but also increase the computation time
+                if len(good_new) > 0 and len(good_old) > 0:
+                    flow_vectors = good_new - good_old
+                    avg_flow_x = float(np.mean(flow_vectors[:, 0])) # type: ignore
+                    avg_flow_y = float(np.mean(flow_vectors[:, 1])) # type: ignore
 
-            poly_sigma=1.5,
-            # standard deviation of the Gaussian used to smooth derivatives
-            # larger values reduce noise but may also reduce accuracy
+                else:
+                    avg_flow_x, avg_flow_y = 0.0, 0.0
+                self.prev_pts = good_new.reshape(-1, 1, 2) if len(good_new) > 0 else None
 
-            flags=0,
-        )
+            else:
+                avg_flow_x, avg_flow_y = 0.0, 0.0
+        else:
+            raise ValueError(f"Unknown algorithm: {self.current_algorithm}")
 
-        # Extract flow components in x and y directions
-        flow_x = flow[..., 0]
-        flow_y = flow[..., 1]
-
-        avg_flow_x = cast(float, np.mean(flow_x))
-        avg_flow_y = cast(float, np.mean(flow_y))
-
-        # Update the previous frame to the current frame for the next analysis
         self.previous_frame = current_frame
 
-        # Return delta pixel values for the current frame
         return avg_flow_x, avg_flow_y
+

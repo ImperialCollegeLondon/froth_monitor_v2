@@ -88,7 +88,7 @@ class ROI:
         self.delta_history.append(
             [self.timestamp, self.delta_pixels, self.calibrated_delta, None]
         )
-        
+
         return if_new_velo, if_new_average
 
     def calculate_real_delta(self, delta_pixels):
@@ -130,7 +130,6 @@ class ROI:
         return projection_mm
 
     def calculate_velocity(self, delta) -> bool:
-
         if self.timestamp == self.timestamp_buffer:
             self.current_velocity += delta
             return False
@@ -143,19 +142,19 @@ class ROI:
             # else:
             if len(self.delta_history) > 1:
                 self.delta_history[-1][-1] = self.current_velocity
-            
+
             self.velo_only_history.append(self.current_velocity)
             self.current_velocity = delta
             return True
 
     def calculate_average_velocity(self) -> bool:
-
-        if len(self.velo_only_history) % 30 == 0: # Average velocity every 30 seconds
+        if len(self.velo_only_history) % 30 == 0:  # Average velocity every 30 seconds
             sum_last_30 = sum(self.velo_only_history[-30:])
             self.average_velocity_past_30s = sum_last_30 / 30
             return True
         else:
             return False
+
 
 class FrameModel:
     """
@@ -204,18 +203,20 @@ class FrameModel:
         # Algorithm parameters
         self.current_algorithm = "farneback"
         self.algorithm_list = ["farneback", "lucas-kanade"]
-        self.lk_params = dict(winSize=(15, 15),
-                                maxLevel=2,
-                                criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 
-                                10, 
-                                0.03))
+        self.lk_params = dict(
+            winSize=(15, 15),
+            maxLevel=2,
+            criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03),
+        )
 
-        self.of_params = dict(pyr_scale=0.5, 
-                                levels=int(3), 
-                                winsize=int(15), 
-                                iterations=int(3), 
-                                poly_n=int(7), 
-                                poly_sigma=1.5)    
+        self.of_params = dict(
+            pyr_scale=0.5,
+            levels=int(3),
+            winsize=int(15),
+            iterations=int(3),
+            poly_n=int(7),
+            poly_sigma=1.5,
+        )
 
     def process_frame(self, frame: np.ndarray) -> tuple[int, list[ROI], bool, bool]:
         """
@@ -275,11 +276,11 @@ class FrameModel:
                 if _new_average == True:
                     if_new_average += 1
 
-        if if_new_velo >0 :
+        if if_new_velo > 0:
             update_velo_plot = True
         if if_new_average > 0:
             update_average_velo = True
-            
+
         print("time to process a frame: ", time.time() - time_1, "s")
         return self.frame_count, self.roi_list, update_velo_plot, update_average_velo
 

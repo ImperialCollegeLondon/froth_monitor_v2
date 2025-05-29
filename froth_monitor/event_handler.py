@@ -12,23 +12,18 @@ from typing import cast
 from PySide6.QtWidgets import (
     QApplication,
     QFileDialog,
-    QMessageBox,
     QDialog,
     QComboBox,
     QHBoxLayout,
     QLabel,
-    QSpinBox,
     QDoubleSpinBox,
-    QVBoxLayout,
     QMessageBox,
     QTableWidget,
-    QTableWidgetItem,
     QPushButton,
     QVBoxLayout,
 )
 from PySide6.QtCore import QTimer, Qt, QRect
 from PySide6.QtGui import QImage, QPixmap
-from PySide6.QtWidgets import QDialogButtonBox
 from PySide6.QtGui import QIcon
 
 # Import MainGUIWindow at the beginning
@@ -48,54 +43,63 @@ from froth_monitor.export import Export
 # Import the video recorder module
 from froth_monitor.video_recorder import VideoRecorder
 
+
 class AlgorithmConfigurationHandler:
     """
     A class to handle the configuration of the velocity calculation algorithm.
 
     This class provides a dialog window for configuring thevelocity calculation
-    algorithm. It allows the user to select an algorithm (Farneback or Lucas-Kanade) and 
-    adjust the parameters for the selected algorithm. The class also provides a 
+    algorithm. It allows the user to select an algorithm (Farneback or Lucas-Kanade) and
+    adjust the parameters for the selected algorithm. The class also provides a
     method to retrieve the selected algorithm and its parameters.
     """
+
     def __init__(self, gui: MainGUIWindow):
         self.gui = gui
         self.dialog = QDialog()
         self.dialog.setWindowTitle("Algorithm Configuration")
         main_layout = QHBoxLayout(self.dialog)
 
-        self.lk_params = dict(winSize=(15, 15),
-                                maxLevel=2,
-                                criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 
-                                10, 
-                                0.03))
+        self.lk_params = dict(
+            winSize=(15, 15),
+            maxLevel=2,
+            criteria=(cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, 10, 0.03),
+        )
         self.lk_valid_values = {
-            "winSize": [(5,5), (7,7), 
-                        (9,9), (11,11), 
-                        (13,13), (15,15), 
-                        (17,17), (19,19), 
-                        (21,21)],  # Must be between 0 and 1 (exclusive)
-            "maxLevel": [0, 1, 2, 3, 4, 5],           # Positive integers
+            "winSize": [
+                (5, 5),
+                (7, 7),
+                (9, 9),
+                (11, 11),
+                (13, 13),
+                (15, 15),
+                (17, 17),
+                (19, 19),
+                (21, 21),
+            ],  # Must be between 0 and 1 (exclusive)
+            "maxLevel": [0, 1, 2, 3, 4, 5],  # Positive integers
             "criteria": [
                 (cv2.TERM_CRITERIA_EPS | cv2.TERM_CRITERIA_COUNT, "EPS|COUNT"),
                 (cv2.TERM_CRITERIA_EPS, "EPS"),
-                (cv2.TERM_CRITERIA_COUNT, "COUNT")
-            ]
+                (cv2.TERM_CRITERIA_COUNT, "COUNT"),
+            ],
         }
 
-        self.of_params = dict(pyr_scale=0.5, 
-                                levels=int(3), 
-                                winsize=int(15), 
-                                iterations=int(3), 
-                                poly_n=int(7), 
-                                poly_sigma=1.5)
+        self.of_params = dict(
+            pyr_scale=0.5,
+            levels=int(3),
+            winsize=int(15),
+            iterations=int(3),
+            poly_n=int(7),
+            poly_sigma=1.5,
+        )
         self.of_valid_values = {
-                "pyr_scale": [0.3, 0.5, 0.7, 0.9],  # Must be between 0 and 1 (exclusive)
-                "levels": [1, 2, 3, 4, 5],           # Positive integers
-                "winsize": [5, 7, 9, 11, 13, 15, 17, 19, 21],  # Positive odd integers
-                "iterations": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], # Positive integers
-                "poly_n": [5, 7],                    # Only 5 or 7
+            "pyr_scale": [0.3, 0.5, 0.7, 0.9],  # Must be between 0 and 1 (exclusive)
+            "levels": [1, 2, 3, 4, 5],  # Positive integers
+            "winsize": [5, 7, 9, 11, 13, 15, 17, 19, 21],  # Positive odd integers
+            "iterations": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],  # Positive integers
+            "poly_n": [5, 7],  # Only 5 or 7
         }
-
 
         # Left side: Algorithm selection and parameter table
         left_layout = QVBoxLayout()
@@ -126,7 +130,9 @@ class AlgorithmConfigurationHandler:
             border-radius: 4px;"
         )
         self._update_parameter_table()
-        self.algorithm_selector.currentIndexChanged.connect(self._update_parameter_table)
+        self.algorithm_selector.currentIndexChanged.connect(
+            self._update_parameter_table
+        )
 
     def _update_parameter_table(self):
         selected_algorithm = self.algorithm_selector.currentText()
@@ -185,7 +191,6 @@ class AlgorithmConfigurationHandler:
                 combo_criteria.addItem(label, val)
             combo_criteria.setCurrentIndex(0)  # Default to EPS|COUNT
             self.param_table.setCellWidget(2, 0, combo_criteria)
-
 
 
 class EventHandler:
@@ -259,7 +264,9 @@ class EventHandler:
         # # Connect buttons directly using the gui reference
         self.gui.play_pause_button.clicked.connect(self.pause_play)
         self.gui.add_roi_button.clicked.connect(self.add_roi)
-        self.gui.algorithm_configuration.clicked.connect(self.open_algorithm_configuration)
+        self.gui.algorithm_configuration.clicked.connect(
+            self.open_algorithm_configuration
+        )
         self.gui.confirm_arrow_button.clicked.connect(self.confirm_arrow_n_ruler)
         self.gui.save_button.clicked.connect(self.save_data)
         self.gui.record_button.clicked.connect(self.toggle_recording)
@@ -397,9 +404,10 @@ class EventHandler:
         """
         Toggle between playing and pausing the video.
         """
+
         def resource_path(relative_path):
-            if hasattr(sys, '_MEIPASS'):
-                return os.path.join(sys._MEIPASS, relative_path) # type: ignore
+            if hasattr(sys, "_MEIPASS"):
+                return os.path.join(sys._MEIPASS, relative_path)  # type: ignore
             return relative_path
 
         if not self.camera_thread.is_running() and not self.playing:
@@ -413,7 +421,9 @@ class EventHandler:
             self.playing = False
             self.gui.statusBar().showMessage("Video paused")
             # Change icon to play icon when paused
-            self.gui.play_pause_button.setIcon(QIcon(resource_path("froth_monitor/resources/play_icon.ico")))
+            self.gui.play_pause_button.setIcon(
+                QIcon(resource_path("froth_monitor/resources/play_icon.ico"))
+            )
         else:
             # If the thread is running but paused, just resume it
             if self.camera_thread.is_running() and self.camera_thread.is_paused():
@@ -421,7 +431,9 @@ class EventHandler:
                 self.playing = True
                 self.gui.statusBar().showMessage("Video resumed")
                 # Change icon to pause icon when playing
-                self.gui.play_pause_button.setIcon(QIcon(resource_path("froth_monitor/resources/pause_icon.ico")))
+                self.gui.play_pause_button.setIcon(
+                    QIcon(resource_path("froth_monitor/resources/pause_icon.ico"))
+                )
 
             # If the thread is not running, we need to restart it
             elif hasattr(self, "last_video_source"):
@@ -481,12 +493,12 @@ class EventHandler:
                 QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
                 QMessageBox.StandardButton.No,  # Set default button to No
             )
-            
+
             # Only proceed if user explicitly clicked Yes
             # The X button will return QMessageBox.StandardButton.No by default
             if reply != QMessageBox.StandardButton.Yes:
                 return  # Exit the function without resetting
-        
+
         # If we get here, either data was saved or user confirmed reset
         QMessageBox.information(self.gui, "Info", "Application reset for new mission.")
 
@@ -598,9 +610,8 @@ class EventHandler:
         Args:
             resized_frame: The resized frame to process
         """
-        self.current_frame_number, roi_list, update_velo_plot, update_average_velo\
-             = self.frame_model.process_frame(
-            resized_frame
+        self.current_frame_number, roi_list, update_velo_plot, update_average_velo = (
+            self.frame_model.process_frame(resized_frame)
         )
         self.display_roi(roi_list)
 
@@ -686,8 +697,8 @@ class EventHandler:
         distance = self.gui.px2mm_spinbox.value()
         print("Spin box value:", distance)
         print("Drawed px:", px)
-        px_ratio = float(px/distance)
-        
+        px_ratio = float(px / distance)
+
         self.frame_model.get_px_to_mm(px_ratio)
         self.gui.px2mm_result_textbox.setText(f"{self.frame_model.px2mm:.1f}")
         # Display the measurement result to the user
@@ -731,7 +742,7 @@ class EventHandler:
             self.overlay_widget = OverlayWidget(self.gui.video_container)
             # Connect the ROI created signal to our handler
             self.overlay_widget.roi_created.connect(self.handle_roi_created)
-        
+
         # Connect the ruler measurement signal to our handler
         self.overlay_widget.ruler_measured.connect(self.handle_ruler_measurement)
 
@@ -794,7 +805,7 @@ class EventHandler:
         self.frame_model.delete_last_roi()
         self.overlay_widget.update()
         self.gui.statusBar().showMessage("Last ROI deleted")
-        
+
     # ------------------------------------Arrow Drawing------------------------------------------------
     def confirm_arrow_n_ruler(self):
         """Confirm the current arrow direction."""
@@ -890,7 +901,7 @@ class EventHandler:
             QMessageBox.warning(
                 self.gui,
                 "Warning",
-                "No video source loaded! Please load a video first."
+                "No video source loaded! Please load a video first.",
             )
             return
 
@@ -910,7 +921,9 @@ class EventHandler:
 
             # If no directory is set, use a default directory
             if not video_directory:
-                video_directory = os.path.join(os.path.expanduser("~"), "Videos", "FrothMonitor")
+                video_directory = os.path.join(
+                    os.path.expanduser("~"), "Videos", "FrothMonitor"
+                )
                 self.export.video_directory = video_directory
 
             # Get frame dimensions and FPS
@@ -918,11 +931,15 @@ class EventHandler:
             frame_width, frame_height = self.camera_thread.get_frame_dimensions()
             if self.camera_thread.is_video_file:
                 fps = self.camera_thread.get_fps()
-            
+
             # Start recording
             success = self.video_recorder.start_recording(
-                video_directory, video_filename, frame_width, frame_height, 
-                fps, self.camera_thread.is_video_file
+                video_directory,
+                video_filename,
+                frame_width,
+                frame_height,
+                fps,
+                self.camera_thread.is_video_file,
             )
 
             if success:
@@ -937,15 +954,19 @@ class EventHandler:
                         background-color: #3367d6;\
                     }"
                 )
-                self.gui.statusBar().showMessage(f"Recording started: {self.video_recorder.output_path}")
+                self.gui.statusBar().showMessage(
+                    f"Recording started: {self.video_recorder.output_path}"
+                )
             else:
                 QMessageBox.critical(
-                    self.gui, "Error", "Could not start recording! Check if the directory is accessible."
+                    self.gui,
+                    "Error",
+                    "Could not start recording! Check if the directory is accessible.",
                 )
         else:
             # Stop recording
             success, output_path, frame_count = self.video_recorder.stop_recording()
-            
+
             if success:
                 self.recording_active = False
                 self.gui.record_button.setText("  Start Recording")
@@ -958,19 +979,17 @@ class EventHandler:
                         background-color: #3367d6;\
                     }"
                 )
-                
+
                 # Show success message with recording statistics
                 QMessageBox.information(
                     self.gui,
                     "Recording Completed",
-                    f"Video saved to: {output_path}\nFrames recorded: {frame_count}"
+                    f"Video saved to: {output_path}\nFrames recorded: {frame_count}",
                 )
-                
+
                 self.gui.statusBar().showMessage(f"Recording stopped: {output_path}")
             else:
-                QMessageBox.warning(
-                    self.gui, "Warning", "No active recording to stop."
-                )
+                QMessageBox.warning(self.gui, "Warning", "No active recording to stop.")
 
     def export_settings(self):
         """Open export settings dialog."""
@@ -997,7 +1016,6 @@ class EventHandler:
         self.if_save = self.export.excel_results(
             self.frame_model.roi_list, self.frame_model.degree, self.frame_model.px2mm
         )
-
 
     # ------------------------------------Plotting Functions------------------------------------------
     def update_velocity_plot(self):
@@ -1109,17 +1127,18 @@ class EventHandler:
             if roi.average_velocity_past_30s is None:
                 list_data.append("N/A")
                 continue
-                
+
             print(list_data)
             # Add average velocity to the table
             list_data.append(roi.average_velocity_past_30s)
-        
+
         self.gui.table_widget.setData(list_data)
         self.gui.table_widget.setHorizontalHeaderLabels(["mean_velocity  "])
         self.gui.table_widget.setFormat("%.2f")
         self.gui.table_widget.setColumnWidth(0, 120)
         # self.table_widget.setColumnWidth(1, 100)
         self.gui.table_widget.setFixedHeight(200)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)

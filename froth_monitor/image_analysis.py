@@ -143,7 +143,11 @@ class VideoAnalysis:
 
             if self.prev_pts is not None:
                 next_pts, status, err = cv2.calcOpticalFlowPyrLK(
-                    gray_previous, gray_current, self.prev_pts, None, **self.lk_params
+                    gray_previous,
+                    gray_current,
+                    self.prev_pts,
+                    None, # type: ignore
+                    **self.lk_params,  # type: ignore
                 )  # type: ignore
                 good_new = (
                     next_pts[status == 1] if next_pts is not None else np.array([])

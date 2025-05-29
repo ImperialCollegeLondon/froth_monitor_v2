@@ -120,7 +120,7 @@ class VideoAnalysis:
                 prev=gray_previous,
                 next=gray_current,
                 flow=cast(MatLike, None),
-                **self.of_params,
+                **self.of_params, # type: ignore
                 flags=0,
             ) # type: ignore
             print(self.of_params)
@@ -138,7 +138,9 @@ class VideoAnalysis:
 
             if self.prev_pts is not None:
 
-                next_pts, status, err = cv2.calcOpticalFlowPyrLK(gray_previous, gray_current, self.prev_pts, None, **self.lk_params)
+                next_pts, status, err = cv2.calcOpticalFlowPyrLK(gray_previous, 
+                                                        gray_current, self.prev_pts, 
+                                                        None, **self.lk_params) # type: ignore
                 good_new = next_pts[status == 1] if next_pts is not None else np.array([])
                 good_old = self.prev_pts[status == 1] if self.prev_pts is not None else np.array([])
 

@@ -47,7 +47,7 @@ class ROI:
         self.coordinate = roi_coordinate
         self.analysis = VideoAnalysis(0, 0)
 
-        self.delta_pixels = None
+        self.delta_pixels = (cast(float, None), cast(float, None))
         self.cross_position = None
 
         self.delta_history = []
@@ -157,9 +157,9 @@ class ROI:
 
     def get_algorithm_n_params(self, algorithm: str, params:dict):
         self.analysis.current_algorithm = algorithm
-        if algorithm == "farneback":
+        if algorithm == "Farneback":
             self.analysis.of_params = params
-        elif algorithm == "lucas-kanade":
+        elif algorithm == "Lucas-kanade":
             self.analysis.lk_params = params
 
 class FrameModel:
@@ -207,8 +207,8 @@ class FrameModel:
         self.degree = -90.0
 
         # Algorithm parameters
-        self.current_algorithm = "farneback"
-        self.algorithm_list = ["farneback", "lucas-kanade"]
+        self.current_algorithm = "Farneback"
+        self.algorithm_list = ["Farneback", "Lucas-Kanade"]
         self.lk_params = dict(
             winSize=(15, 15),
             maxLevel=2,
@@ -239,11 +239,11 @@ class FrameModel:
         self.current_algorithm = algorithm
         if algorithm == "Farneback":
             self.of_params = params
-        elif algorithm == "Lucas-kanade":
+        elif algorithm == "Lucas-Kanade":
             self.lk_params = params
 
-        print(algorithm, params)
-        
+        self.algo_roi.get_algorithm_n_params(self.current_algorithm, params)
+
     def process_frame(self, frame: np.ndarray) -> tuple[int, list[ROI], bool, bool]:
         """
         Process a video frame, increment the frame counter, and return the frame number
@@ -309,6 +309,15 @@ class FrameModel:
 
         print("time to process a frame: ", time.time() - time_1, "s")
         return self.frame_count, self.roi_list, update_velo_plot, update_average_velo
+
+    def initialize_algo_config(self):
+        roi = QRect(0, 0, 0, 0)
+        self.algo_roi = ROI(roi, 1, 1)
+        self.algo_roi.get_algorithm_n_params(self.current_algorithm, self.of_params)
+
+    def process_frame_for_algo_config(self, frame: np.ndarray) -> tuple[float, float]:
+        self.algo_roi.process_frame(frame)
+        return self.algo_roi.delta_pixels
 
     def get_frame_count(self) -> int:
         """

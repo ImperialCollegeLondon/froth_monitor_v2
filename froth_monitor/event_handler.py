@@ -58,7 +58,12 @@ class AlgorithmConfigurationHandler:
                         camera_thread: CameraThread,
                         frame_model: FrameModel):
         self.camera_thread = camera_thread
+        
+
+        self.overlay_widget = cast(OverlayWidget, None)
+
         self.frame_model = frame_model
+        self.frame_model.initialize_algo_config()
 
         self.gui = gui
         self.dialog = QDialog()
@@ -148,6 +153,9 @@ class AlgorithmConfigurationHandler:
         main_layout.addLayout(left_layout)
         main_layout.addLayout(right_layout)
         self.dialog.setLayout(main_layout)
+
+        self.initialize_tool_window()
+        self.camera_thread.frame_available.connect(self.process_new_frame)
 
     def _add_algorithm_combo(self):
         self.algorithm_selector.addItems(["Farneback", "Lucas-Kanade"])
@@ -244,17 +252,25 @@ class AlgorithmConfigurationHandler:
 
             self.frame_model.confirm_algorithm_n_params(selected_algorithm, self.lk_params)
         
-    # def _process_frame_with_model(self, resized_frame):
-    #     """
-    #     Process the frame with the frame model and display ROIs.
+    def initialize_tool_window(self):
 
-    #     Args:
-    #         resized_frame: The resized frame to process
-    #     """
-    #     self.current_frame_number, roi_list, update_velo_plot, update_average_velo = (
-    #         self.frame_model.process_frame(resized_frame)
-    #     )
-    #     self.display_roi(roi_list)
+        # Initialize the video rectangle to the full canvas size
+        # This will be updated when the first frame arrives
+        self.video_rect = QRect(0, 0, self.canvas_width, self.canvas_height)
+
+        # Create and set up the overlay widget
+        self.overlay_widget = OverlayWidget(self.video_canvas)
+        self.overlay_widget.setGeometry(self.video_rect)
+        self.overlay_widget.if_algo_config = True
+        self.overlay_widget.video_height = self.canvas_height
+        self.overlay_widget.video_width = self.canvas_width
+
+        # Show the overlay
+        self.overlay_widget.show()
+        self.overlay_active = True
+
+        # Bring the overlay to the front
+        self.overlay_widget.raise_()
 
     def process_new_frame(self, frame):
         """
@@ -271,7 +287,8 @@ class AlgorithmConfigurationHandler:
         self.current_frame = frame
 
         # Convert frame to QImage and scale it
-        qt_image = self._convert_frame_to_qimage(frame)
+        cropped_frame = self._crop_image(frame)
+        qt_image = self._convert_frame_to_qimage(cropped_frame)
         scaled_image = self._scale_image_to_canvas(qt_image)
 
         # Create a resized frame for processing
@@ -282,17 +299,31 @@ class AlgorithmConfigurationHandler:
         # Only allow to let frame pass in when the previous frame has been processed
         # This is to prevent the overstacking of frames
         self.camera_thread.if_release = False
-        # self._process_frame_with_model(resized_frame)
-        self.camera_thread.if_release = True
-
-        # Only allow to let frame pass in when the previous frame has been processed
-        # This is to prevent the overstacking of frames
-        self.camera_thread.if_release = False
+        self._process_frame_with_model(resized_frame)
         self.camera_thread.if_release = True
 
         # Display the frame on the canvas
         pixmap = self._display_frame_on_canvas(scaled_image)
 
+    def _crop_image(self, frame):
+        """
+        Crop the frame based on the canvas size.
+
+        Args:
+            frame: The frame to be cropped
+
+        Returns:
+            The cropped frame
+        """
+        # Calculate the cropping coordinates
+        x = (frame.shape[1] - self.canvas_width) // 2
+        y = (frame.shape[0] - self.canvas_height) // 2
+
+        # Crop the frame
+        cropped_frame = frame[y : y + self.canvas_height, x : x + self.canvas_width]
+
+        return cropped_frame
+        
     def _convert_frame_to_qimage(self, frame):
         """
         Convert an OpenCV frame (BGR) to a Qt QImage (RGB).
@@ -338,6 +369,11 @@ class AlgorithmConfigurationHandler:
             ndarray: Resized frame
         """
         return cv2.resize(frame, (width, height))
+
+    def _process_frame_with_model(self, resized_frame):
+        self.delta_pixels = self.frame_model.process_frame_for_algo_config(resized_frame)
+        print(self.delta_pixels)
+        self.overlay_widget.display_roi_for_algo_config(self.delta_pixels)
 
     def _display_frame_on_canvas(self, scaled_image):
         """

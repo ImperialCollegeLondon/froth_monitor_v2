@@ -116,7 +116,7 @@ class VideoAnalysis:
         gray_current: MatLike = cv2.cvtColor(current_frame, cv2.COLOR_BGR2GRAY)
         gray_previous: MatLike = cv2.cvtColor(self.previous_frame, cv2.COLOR_BGR2GRAY)
 
-        if self.current_algorithm == "farneback":
+        if self.current_algorithm == "Farneback":
             flow = cv2.calcOpticalFlowFarneback(
                 prev=gray_previous,
                 next=gray_current,
@@ -124,13 +124,13 @@ class VideoAnalysis:
                 **self.of_params,  # type: ignore
                 flags=0,
             )  # type: ignore
-            print(self.of_params)
+
             flow_x = flow[..., 0]
             flow_y = flow[..., 1]
             avg_flow_x = cast(float, np.mean(flow_x))  # type: ignore
             avg_flow_y = cast(float, np.mean(flow_y))  # type: ignore
 
-        elif self.current_algorithm == "lucas-kanade":
+        elif self.current_algorithm == "Lucas-Kanade":
             if getattr(self, "prev_pts", None) is None:
                 # Detect good features to track in the previous frame
                 self.prev_pts = cv2.goodFeaturesToTrack(

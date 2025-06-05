@@ -155,6 +155,12 @@ class ROI:
         else:
             return False
 
+    def get_algorithm_n_params(self, algorithm: str, params:dict):
+        self.analysis.current_algorithm = algorithm
+        if algorithm == "farneback":
+            self.analysis.of_params = params
+        elif algorithm == "lucas-kanade":
+            self.analysis.lk_params = params
 
 class FrameModel:
     """
@@ -218,6 +224,26 @@ class FrameModel:
             poly_sigma=1.5,
         )
 
+    def confirm_algorithm_n_params(self, algorithm: str, params: dict) -> None:
+        """
+        Confirm the algorithm and parameters for optical flow.
+
+        Parameters
+        ----------
+        algorithm : str
+            The algorithm to use for optical flow.
+        params : dict
+            The parameters for the optical flow algorithm.
+        """
+
+        self.current_algorithm = algorithm
+        if algorithm == "Farneback":
+            self.of_params = params
+        elif algorithm == "Lucas-kanade":
+            self.lk_params = params
+
+        print(algorithm, params)
+        
     def process_frame(self, frame: np.ndarray) -> tuple[int, list[ROI], bool, bool]:
         """
         Process a video frame, increment the frame counter, and return the frame number
@@ -340,6 +366,7 @@ class FrameModel:
 
     def add_roi(self, roi):
         new_roi = ROI(roi, self.px2mm, self.degree)
+        new_roi.get_algorithm_n_params(self.current_algorithm, self.of_params)
         self.roi_list.append(new_roi)
 
     def delete_last_roi(self):

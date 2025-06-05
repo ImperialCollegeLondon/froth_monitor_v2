@@ -90,7 +90,7 @@ class VideoAnalysis:
         self.current_velocity = 0
         self.arrow_dir_x = arrow_dir_x
         self.arrow_dir_y = arrow_dir_y
-        self.current_algorithm = "farneback"  # or "lucas-kanade"
+        self.current_algorithm = "Farneback"  # or "lucas-kanade"
 
         self.lk_params = dict(
             winSize=(15, 15),

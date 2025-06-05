@@ -54,7 +54,12 @@ class AlgorithmConfigurationHandler:
     method to retrieve the selected algorithm and its parameters.
     """
 
-    def __init__(self, gui: MainGUIWindow):
+    def __init__(self, gui: MainGUIWindow, 
+                        camera_thread: CameraThread,
+                        frame_model: FrameModel):
+        self.camera_thread = camera_thread
+        self.frame_model = frame_model
+
         self.gui = gui
         self.dialog = QDialog()
         self.dialog.setWindowTitle("Algorithm Configuration")
@@ -106,15 +111,36 @@ class AlgorithmConfigurationHandler:
         self.algorithm_selector = QComboBox()
         left_layout.addWidget(self.algorithm_selector)
         self.param_table = QTableWidget()  # Placeholder for parameter table
+        self.param_table.setStyleSheet(
+            """
+            background-color: white;
+            color: blue; font-size: 12px; font-weight: bold; border: 1px solid #ccc;
+            """
+        )
         left_layout.addWidget(self.param_table)
         left_layout.addStretch()
+
+        self.confirm_algo_button = QPushButton("Confirm")
+        self.confirm_algo_button.clicked.connect(self._confirm_algo)
+        self.confirm_algo_button.setStyleSheet(
+            """
+            background-color: #4285f4; color: white; font-size: 12px; padding: 8px;
+            border-radius: 4px;
+            """
+        )  # Example style for the button, adjust as needed
+        left_layout.addWidget(self.confirm_algo_button)
 
         self._add_algorithm_combo()  # Add this line
 
         # Right side: Video canvas and info bar
         right_layout = QVBoxLayout()
         self.video_canvas = QLabel("[Video Canvas]")  # Placeholder for video display
-        self.video_canvas.setFixedSize(320, 240)  # Example size
+        self.canvas_width = 320  # Example width
+        self.canvas_height = 240  # Example height
+        self.video_canvas.setFixedSize(self.canvas_width, self.canvas_height)
+        self.video_canvas.setStyleSheet(
+            "border: 1px solid #ccc; background-color: #f0f0f0;"
+        )  # Example style
         right_layout.addWidget(self.video_canvas)
         self.info_bar = QLabel("Frame time: -- ms | Avg (15): -- ms")
         right_layout.addWidget(self.info_bar)
@@ -191,6 +217,141 @@ class AlgorithmConfigurationHandler:
                 combo_criteria.addItem(label, val)
             combo_criteria.setCurrentIndex(0)  # Default to EPS|COUNT
             self.param_table.setCellWidget(2, 0, combo_criteria)
+
+    def _confirm_algo(self):
+        """
+        Confirm the selected algorithm and update the GUI accordingly.
+        """
+        selected_algorithm = self.algorithm_selector.currentText()
+        if selected_algorithm == "Farneback":
+            self.of_params["pyr_scale"] = float(
+                cast(QComboBox, self.param_table.cellWidget(0, 0)).currentText()
+            )
+            self.of_params["levels"] = int(cast(QComboBox, self.param_table.cellWidget(1, 0)).currentText())
+            self.of_params["winsize"] = int(cast(QComboBox, self.param_table.cellWidget(2, 0)).currentText())
+            self.of_params["iterations"] = int(cast(QComboBox, self.param_table.cellWidget(3, 0)).currentText())
+            self.of_params["poly_n"] = int(cast(QComboBox, self.param_table.cellWidget(4, 0)).currentText())
+
+            self.frame_model.confirm_algorithm_n_params(selected_algorithm, 
+            self.of_params)
+        if selected_algorithm == "Lucas-Kanade":
+            winsize_str = cast(QComboBox, self.param_table.cellWidget(0, 0)).currentText()
+            winsize_tuple = eval(winsize_str)  # Safely convert string "(15, 15)" to tuple
+            self.lk_params["winSize"] = winsize_tuple
+            self.lk_params["maxLevel"] = int(cast(QComboBox, self.param_table.cellWidget(1, 0)).currentText())
+            criteria_val = cast(QComboBox, self.param_table.cellWidget(2, 0)).currentData()
+            self.lk_params["criteria"] = (criteria_val, 10, 0.03)
+
+            self.frame_model.confirm_algorithm_n_params(selected_algorithm, self.lk_params)
+        
+    # def _process_frame_with_model(self, resized_frame):
+    #     """
+    #     Process the frame with the frame model and display ROIs.
+
+    #     Args:
+    #         resized_frame: The resized frame to process
+    #     """
+    #     self.current_frame_number, roi_list, update_velo_plot, update_average_velo = (
+    #         self.frame_model.process_frame(resized_frame)
+    #     )
+    #     self.display_roi(roi_list)
+
+    def process_new_frame(self, frame):
+        """
+        Process and display a new frame received from the camera thread.
+
+        This method is called whenever a new frame is available from the camera thread.
+        It processes the frame, updates the UI, and handles ROI display.
+
+        Args:
+            frame: The new frame from the camera thread
+        """
+
+        # Store the current frame for potential further processing
+        self.current_frame = frame
+
+        # Convert frame to QImage and scale it
+        qt_image = self._convert_frame_to_qimage(frame)
+        scaled_image = self._scale_image_to_canvas(qt_image)
+
+        # Create a resized frame for processing
+        resized_frame = self._create_resized_frame(
+            frame, scaled_image.width(), scaled_image.height()
+        )
+
+        # Only allow to let frame pass in when the previous frame has been processed
+        # This is to prevent the overstacking of frames
+        self.camera_thread.if_release = False
+        # self._process_frame_with_model(resized_frame)
+        self.camera_thread.if_release = True
+
+        # Only allow to let frame pass in when the previous frame has been processed
+        # This is to prevent the overstacking of frames
+        self.camera_thread.if_release = False
+        self.camera_thread.if_release = True
+
+        # Display the frame on the canvas
+        pixmap = self._display_frame_on_canvas(scaled_image)
+
+    def _convert_frame_to_qimage(self, frame):
+        """
+        Convert an OpenCV frame (BGR) to a Qt QImage (RGB).
+
+        Args:
+            frame: OpenCV frame in BGR format
+
+        Returns:
+            QImage: The converted Qt image
+        """
+        # Convert the frame from BGR to RGB format (OpenCV uses BGR, Qt uses RGB)
+        rgb_frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+        # Create a QImage from the frame data
+        h, w, ch = rgb_frame.shape
+        bytes_per_line = ch * w
+        return QImage(rgb_frame.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+
+    def _scale_image_to_canvas(self, qt_image):
+        """
+        Scale the QImage to fit the canvas while maintaining aspect ratio.
+
+        Args:
+            qt_image: The QImage to scale
+
+        Returns:
+            QImage: The scaled image
+        """
+        return qt_image.scaled(
+            self.canvas_width, self.canvas_height, Qt.AspectRatioMode.KeepAspectRatio
+        )
+
+    def _create_resized_frame(self, frame, width, height):
+        """
+        Create a resized NumPy array with the specified dimensions.
+
+        Args:
+            frame: The original frame
+            width: Target width
+            height: Target height
+
+        Returns:
+            ndarray: Resized frame
+        """
+        return cv2.resize(frame, (width, height))
+
+    def _display_frame_on_canvas(self, scaled_image):
+        """
+        Convert the QImage to a QPixmap and display it on the video canvas.
+
+        Args:
+            scaled_image: The scaled QImage to display
+
+        Returns:
+            QPixmap: The pixmap that was set on the canvas
+        """
+        pixmap = QPixmap.fromImage(scaled_image)
+        self.video_canvas.setPixmap(pixmap)
+        return pixmap
 
 
 class EventHandler:
@@ -396,7 +557,9 @@ class EventHandler:
         """
         Open a dialog to configure the velocity calculation algorithm.
         """
-        dialog = AlgorithmConfigurationHandler(self.gui)
+        dialog = AlgorithmConfigurationHandler(self.gui, 
+                                                self.camera_thread, 
+                                                self.frame_model)
         dialog.dialog.exec()
         pass
 

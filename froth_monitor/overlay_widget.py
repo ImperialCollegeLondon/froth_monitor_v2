@@ -58,7 +58,7 @@ class OverlayWidget(QWidget):
         
         self.if_algo_config = False
         self.algo_delta_pixels = (0.0, 0.0)
-        self.algo_delta_cross_pos = None
+        self.algo_delta_cross_pos = (cast(int, None), cast(int, None))
         # Rectangle drawing attributes
         self.drawing_roi = False
         self.roi_start_point = QPoint()
@@ -594,8 +594,8 @@ class OverlayWidget(QWidget):
         if self.algo_delta_pixels is not None:
             delta_x, delta_y = self.algo_delta_pixels
 
-            if self.algo_delta_cross_pos is None:
-                self.algo_delta_cross_pos = int(x1 + x2 // 2), int(y1 + y1 // 2)
+            if self.algo_delta_cross_pos == (None, None):
+                self.algo_delta_cross_pos = int(x1 + x2 // 2), int(y1 + y2 // 2)
 
             # Calculate the new position for the cross
             cross_x, cross_y = self.algo_delta_cross_pos

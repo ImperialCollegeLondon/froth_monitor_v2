@@ -8,6 +8,7 @@ data processing and analysis.
 import cv2
 import sys
 import os
+import time
 from typing import cast
 from PySide6.QtWidgets import (
     QApplication,
@@ -58,17 +59,10 @@ class AlgorithmConfigurationHandler:
                         camera_thread: CameraThread,
                         frame_model: FrameModel):
         self.camera_thread = camera_thread
-        
-
         self.overlay_widget = cast(OverlayWidget, None)
 
         self.frame_model = frame_model
         self.frame_model.initialize_algo_config()
-
-        self.gui = gui
-        self.dialog = QDialog()
-        self.dialog.setWindowTitle("Algorithm Configuration")
-        main_layout = QHBoxLayout(self.dialog)
 
         self.lk_params = dict(
             winSize=(15, 15),
@@ -94,7 +88,6 @@ class AlgorithmConfigurationHandler:
                 (cv2.TERM_CRITERIA_COUNT, "COUNT"),
             ],
         }
-
         self.of_params = dict(
             pyr_scale=0.5,
             levels=int(3),
@@ -110,6 +103,22 @@ class AlgorithmConfigurationHandler:
             "iterations": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],  # Positive integers
             "poly_n": [5, 7],  # Only 5 or 7
         }
+
+        self.gui = gui
+
+        self.previous_process_time = 0.0
+        self.accumulated_process_time: list[float] = []
+        self.frame_count = 0
+        self.process_time_avg_30 = 0.0
+
+        self.initUI()
+        self.initialize_tool_window()
+        self.camera_thread.frame_available.connect(self.process_new_frame)
+
+    def initUI(self):
+        self.dialog = QDialog()
+        self.dialog.setWindowTitle("Algorithm Configuration")
+        main_layout = QHBoxLayout(self.dialog)
 
         # Left side: Algorithm selection and parameter table
         left_layout = QVBoxLayout()
@@ -147,15 +156,14 @@ class AlgorithmConfigurationHandler:
             "border: 1px solid #ccc; background-color: #f0f0f0;"
         )  # Example style
         right_layout.addWidget(self.video_canvas)
+        
+        # Info bar
         self.info_bar = QLabel("Frame time: -- ms | Avg (15): -- ms")
         right_layout.addWidget(self.info_bar)
 
         main_layout.addLayout(left_layout)
         main_layout.addLayout(right_layout)
         self.dialog.setLayout(main_layout)
-
-        self.initialize_tool_window()
-        self.camera_thread.frame_available.connect(self.process_new_frame)
 
     def _add_algorithm_combo(self):
         self.algorithm_selector.addItems(["Farneback", "Lucas-Kanade"])
@@ -283,6 +291,8 @@ class AlgorithmConfigurationHandler:
             frame: The new frame from the camera thread
         """
 
+        time_start = time.time()
+
         # Store the current frame for potential further processing
         self.current_frame = frame
 
@@ -304,6 +314,30 @@ class AlgorithmConfigurationHandler:
 
         # Display the frame on the canvas
         pixmap = self._display_frame_on_canvas(scaled_image)
+
+        self.previous_process_time = time.time() - time_start
+        self._update_info_bar()
+    
+    def _update_info_bar(self):
+        """
+        Update the information bar with the current frame time and average time.
+        """
+        self.frame_count += 1
+        self.accumulated_process_time.append(self.previous_process_time)
+
+        # Calculate the average time over the last 30 frames
+        if len(self.accumulated_process_time) == 30:
+            self.process_time_avg_30 = sum(self.accumulated_process_time) / 30
+            self.accumulated_process_time = self.accumulated_process_time[1:]
+            
+        self.info_bar.setText(
+            f"Frame time: {self.previous_process_time * 1000:.2f} ms |\
+                 Avg (30): {self.process_time_avg_30 * 1000:.2f} ms"
+        )
+        self.info_bar.setStyleSheet(
+            "color: white; font-size: 12px; padding: 8px; \
+            border-radius: 4px;"
+        )
 
     def _crop_image(self, frame):
         """
@@ -593,6 +627,10 @@ class EventHandler:
         """
         Open a dialog to configure the velocity calculation algorithm.
         """
+        if not self.camera_thread.is_running():
+            QMessageBox.warning(self.gui, "Warning", "No video source loaded!")
+            return
+
         dialog = AlgorithmConfigurationHandler(self.gui, 
                                                 self.camera_thread, 
                                                 self.frame_model)

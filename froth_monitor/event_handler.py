@@ -135,7 +135,7 @@ class AlgorithmConfigurationHandler:
         left_layout.addWidget(self.param_table)
         left_layout.addStretch()
 
-        self.confirm_algo_button = QPushButton("Confirm")
+        self.confirm_algo_button = QPushButton("Apply change")
         self.confirm_algo_button.setStyleSheet(
             """
             QPushButton {
@@ -152,8 +152,26 @@ class AlgorithmConfigurationHandler:
             """
         )
         self.confirm_algo_button.clicked.connect(self._confirm_algo)
+        
+        self.exit_button = QPushButton("Confirm and Exit")
+        self.exit_button.setStyleSheet(
+            """
+            QPushButton {
+                background-color: #4285f4;
+                color: white;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 8px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #3367d6;
+            }
+            """
+        )
+        self.exit_button.clicked.connect(self.dialog.accept)
         left_layout.addWidget(self.confirm_algo_button)
-
+        left_layout.addWidget(self.exit_button)
         self._add_algorithm_combo()  # Add this line
 
         # Right side: Video canvas and info bar
@@ -664,9 +682,9 @@ class EventHandler:
         """
         Open a dialog to configure the velocity calculation algorithm.
         """
-        if not self.camera_thread.is_running():
-            QMessageBox.warning(self.gui, "Warning", "No video source loaded!")
-            return
+        # if not self.camera_thread.is_running():
+        #     QMessageBox.warning(self.gui, "Warning", "No video source loaded!")
+        #     return
 
         dialog = AlgorithmConfigurationHandler(self.gui, 
                                                 self.camera_thread, 

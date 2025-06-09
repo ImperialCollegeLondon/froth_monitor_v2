@@ -169,7 +169,7 @@ class AlgorithmConfigurationHandler:
             }
             """
         )
-        self.exit_button.clicked.connect(self.dialog.accept)
+        self.exit_button.clicked.connect(self.dialog.close)
         left_layout.addWidget(self.confirm_algo_button)
         left_layout.addWidget(self.exit_button)
         self._add_algorithm_combo()  # Add this line
@@ -477,7 +477,7 @@ class AlgorithmConfigurationHandler:
             f"Algorithm: {selected_algorithm}\n Parameters:\n{param_str}"
         )
 
-        event.accept()
+        self.dialog.close()
 
 
 class EventHandler:
@@ -519,6 +519,7 @@ class EventHandler:
 
         # Parameters of the event handling logic
         self.playing = False
+        self.confirm_algo = False
         self.confirm_calibration = False
         self.current_frame = None
         self.frame_width = 0
@@ -682,9 +683,9 @@ class EventHandler:
         """
         Open a dialog to configure the velocity calculation algorithm.
         """
-        # if not self.camera_thread.is_running():
-        #     QMessageBox.warning(self.gui, "Warning", "No video source loaded!")
-        #     return
+        if not self.camera_thread.is_running():
+            QMessageBox.warning(self.gui, "Warning", "No video source loaded!")
+            return
 
         dialog = AlgorithmConfigurationHandler(self.gui, 
                                                 self.camera_thread, 
@@ -796,6 +797,8 @@ class EventHandler:
 
         self.if_save = False
         self.confirm_calibration = False
+        self.confirm_algo = False
+        self.current_frame_number = 0
         self.camera_thread.reset()
         self.gui.video_canvas_label.clear()
         self.gui.plot_widget.clear()

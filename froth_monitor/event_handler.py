@@ -116,7 +116,8 @@ class AlgorithmConfigurationHandler:
         self.camera_thread.frame_available.connect(self.process_new_frame)
 
     def initUI(self):
-        self.dialog = QDialog()
+        self.dialog = QDialog(self.gui)
+        self.dialog.closeEvent = lambda arg__1: self.closeEvent(arg__1)
         self.dialog.setWindowTitle("Algorithm Configuration")
         main_layout = QHBoxLayout(self.dialog)
 
@@ -135,13 +136,22 @@ class AlgorithmConfigurationHandler:
         left_layout.addStretch()
 
         self.confirm_algo_button = QPushButton("Confirm")
-        self.confirm_algo_button.clicked.connect(self._confirm_algo)
         self.confirm_algo_button.setStyleSheet(
             """
-            background-color: #4285f4; color: white; font-size: 12px; padding: 8px;
-            border-radius: 4px;
+            QPushButton {
+                background-color: #4285f4;
+                color: white;
+                font-size: 14px;
+                font-weight: bold;
+                padding: 8px;
+                border-radius: 4px;
+            }
+            QPushButton:hover {
+                background-color: #3367d6;
+            }
             """
-        )  # Example style for the button, adjust as needed
+        )
+        self.confirm_algo_button.clicked.connect(self._confirm_algo)
         left_layout.addWidget(self.confirm_algo_button)
 
         self._add_algorithm_combo()  # Add this line
@@ -335,7 +345,7 @@ class AlgorithmConfigurationHandler:
                  Avg (30): {self.process_time_avg_30 * 1000:.2f} ms"
         )
         self.info_bar.setStyleSheet(
-            "color: white; font-size: 12px; padding: 8px; \
+            "color: black; font-size: 12px; padding: 8px; \
             border-radius: 4px;"
         )
 
@@ -422,6 +432,34 @@ class AlgorithmConfigurationHandler:
         pixmap = QPixmap.fromImage(scaled_image)
         self.video_canvas.setPixmap(pixmap)
         return pixmap
+
+    def closeEvent(self, event):
+        """
+        Handle the window close event.
+
+        This method is called when the window is closed. It releases the
+        video capture and stops the timer.
+
+        Args:
+            event: The close event.
+        """
+        selected_algorithm = self.algorithm_selector.currentText()
+
+        if selected_algorithm == "Farneback":
+            params = self.of_params
+
+        else:
+            params = self.lk_params
+
+        param_str = "\n".join(f"{k}: {v}" for k, v in params.items())
+
+        QMessageBox.information(
+            self.dialog,
+            "Algorithm Configuration",
+            f"Algorithm: {selected_algorithm}\n Parameters:\n{param_str}"
+        )
+
+        event.accept()
 
 
 class EventHandler:
@@ -521,7 +559,6 @@ class EventHandler:
 
         self.initialze_tool_window()
         self.timer.start(self.time_interval)
-        print(f"FPS rate: {self.fps_rate}")
 
     def import_local_video(self):
         """
